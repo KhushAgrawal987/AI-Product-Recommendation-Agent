@@ -225,6 +225,6 @@ st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #888;'>
     Built with ❤️ using Streamlit, Dify, and Gemini AI<br>
-    🏆 Made for the AI Innovation Competition
+    
 </div>
 """, unsafe_allow_html=True)
