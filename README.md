@@ -4,7 +4,7 @@
 
 ## 🌟 Live Demo
 
-🔗 **Try it now:** [Your Streamlit URL]
+🔗 **Try it now:** https://ai-appuct-recommendation-agent-khush.streamlit.app/
 
 ## 🎯 Problem Solved
 
@@ -73,14 +73,6 @@ cp .env.example .env
 streamlit run app.py
 \`\`\`
 
-## 📸 Screenshots
-
-[Add 3-4 screenshots of your app]
-
-## 🎬 Demo Video
-
-[Link to your demo video]
-
 ## 🤖 How the AI Agent Works
 
 The agent uses Dify's function calling capability to autonomously decide which tools to use:
@@ -108,17 +100,13 @@ The agent uses Dify's function calling capability to autonomously decide which t
 
 ## 👥 Team
 
-- **[Your Name]** - Developer
-- LinkedIn: [Your LinkedIn]
-- GitHub: [@yourusername]
-
-## 📝 License
-
-MIT License
+- **Khush Agrawal** - Developer
+- LinkedIn: linkedin.com/in/khush-agrawal-732892366/
+- GitHub: KhushAgrawal987
 
 ## 🙏 Acknowledgments
 
 - Dify AI for the powerful agent platform
 - Google Gemini for the LLM
 - Streamlit for the amazing framework
-- Tavily for search API
+- duckduckgo for search API
