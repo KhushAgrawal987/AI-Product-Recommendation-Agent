@@ -1,8 +1,9 @@
 """
-Dify API Client - Fixed for 400 errors
+Dify API Client - Fixed for Agent apps (streaming mode)
 """
 import requests
 import os
+import json
 
 try:
     import streamlit as st
@@ -36,18 +37,20 @@ class DifyClient:
         }
     
     def get_recommendation(self, query: str, user_id: str = "user-001", conversation_id: str = ""):
-        """Send query to Dify agent and get recommendation"""
+        """
+        Send query to Dify Agent and get recommendation.
+        Uses STREAMING mode (required for Agent apps).
+        """
         
-        # Build payload — only include conversation_id if it's not empty
+        # Agent apps require streaming mode
         payload = {
             "inputs": {},
             "query": query,
-            "response_mode": "blocking",
+            "response_mode": "streaming",  # CHANGED from "blocking" to "streaming"
             "user": user_id
         }
         
-        # CRITICAL FIX: Only add conversation_id if it has a value
-        # Empty conversation_id causes 400 error in some Dify versions
+        # Only include conversation_id if it has a value
         if conversation_id and conversation_id.strip():
             payload["conversation_id"] = conversation_id
         
@@ -56,10 +59,11 @@ class DifyClient:
                 self.api_url,
                 headers=self.headers,
                 json=payload,
-                timeout=120
+                timeout=120,
+                stream=True  # Enable streaming
             )
             
-            # Detailed error handling
+            # Check for HTTP errors
             if response.status_code != 200:
                 error_msg = f"Status {response.status_code}"
                 try:
@@ -74,18 +78,72 @@ class DifyClient:
                     "error": error_msg
                 }
             
-            data = response.json()
-            return {
-                "success": True,
-                "answer": data.get("answer", "No response received"),
-                "conversation_id": data.get("conversation_id", ""),
-                "message_id": data.get("message_id", "")
-            }
+            # Parse streaming response
+            full_answer = ""
+            conversation_id_received = ""
+            message_id_received = ""
+            
+            for line in response.iter_lines():
+                if not line:
+                    continue
+                
+                # Decode the line
+                line_str = line.decode('utf-8')
+                
+                # Streaming responses come as "data: {json}"
+                if line_str.startswith('data: '):
+                    json_str = line_str[6:]  # Remove "data: " prefix
+                    
+                    try:
+                        data = json.loads(json_str)
+                        event_type = data.get('event', '')
+                        
+                        # Handle different event types
+                        if event_type == 'agent_message':
+                            # Agent message chunks
+                            full_answer += data.get('answer', '')
+                            conversation_id_received = data.get('conversation_id', conversation_id_received)
+                            message_id_received = data.get('message_id', message_id_received)
+                        
+                        elif event_type == 'message':
+                            # Regular message chunks
+                            full_answer += data.get('answer', '')
+                            conversation_id_received = data.get('conversation_id', conversation_id_received)
+                            message_id_received = data.get('message_id', message_id_received)
+                        
+                        elif event_type == 'message_end':
+                            # End of message
+                            conversation_id_received = data.get('conversation_id', conversation_id_received)
+                        
+                        elif event_type == 'error':
+                            # Error event
+                            return {
+                                "success": False,
+                                "error": f"Agent error: {data.get('message', 'Unknown error')}"
+                            }
+                    
+                    except json.JSONDecodeError:
+                        # Skip lines that can't be parsed
+                        continue
+            
+            # Return the complete response
+            if full_answer:
+                return {
+                    "success": True,
+                    "answer": full_answer,
+                    "conversation_id": conversation_id_received,
+                    "message_id": message_id_received
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "No response received from agent"
+                }
         
         except requests.exceptions.Timeout:
             return {
                 "success": False,
-                "error": "Request timed out (120s). The agent is taking too long. Try a simpler query."
+                "error": "Request timed out (120s). Agent took too long. Try a simpler query."
             }
         except requests.exceptions.ConnectionError:
             return {
